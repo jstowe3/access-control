@@ -21,6 +21,26 @@ public class Role {
 
     public Role(String name) {
         this.name = name;
+        this.id = getId(name);
+    }
+
+    public Role(long id) {
+        this.id = id;
+        try (Jedis jedis = (Jedis)RedisHelper.jedis()) {
+            this.name = jedis.hget(getKey(), "name");
+        }
+    }
+
+    public long getId(String name) {
+        try (Jedis jedis = (Jedis)RedisHelper.jedis()) {
+            if(jedis.zrank(MASTER_NAME_SET, name) == null) {return 0;}
+            Double id = jedis.zscore(MASTER_NAME_SET, name);
+            return id.longValue();
+        }
+    }
+
+    public long getId() {
+        return id;
     }
 
     public boolean isNameUnique() {
@@ -28,7 +48,7 @@ public class Role {
             return false;
         }
         try (Jedis jedis = (Jedis)RedisHelper.jedis()) {
-            return jedis.sismember(MASTER_NAME_SET, name);
+            return jedis.zrank(MASTER_NAME_SET, name) == null;
         }
     }
 
@@ -41,6 +61,9 @@ public class Role {
     }
 
     public void addAccess(Feature feature) {
+        if(id == 0) {
+            return;
+        }
         try (Jedis jedis = (Jedis)RedisHelper.jedis()) {
             jedis.sadd(getSetKey(), feature.getKey());
         }
@@ -55,7 +78,7 @@ public class Role {
             map.put("id", Long.toString(id));
             map.put("name", name);
             jedis.hmset(ROLE_KEY_PREFIX+id, map);
-            jedis.sadd(MASTER_NAME_SET, name);
+            jedis.zadd(MASTER_NAME_SET, id, name);
         }
     }
 }

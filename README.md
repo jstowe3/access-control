@@ -2,23 +2,23 @@
 
 *many-to-many relationships between roles and features*
 
-Each actors.Role object knows which features it can access.
+Each Role object knows which features it can access.
 
-Each actors.Feature object knows which Roles can access it.
+Each Feature object knows which Roles can access it.
 
-Create a Redis set for each role: 
+We create a Redis set for each role: 
 
 - sRole:{role-id}
  
     - contains feature-keys
 
-Create a Redis set for each feature:
+We create a Redis set for each feature:
  
 - sFeature:{feature-id} 
 
     - contains role-keys
 
-Need methods to:
+The Access Control System should include methods to:
  
 - add a new role
 
@@ -31,3 +31,25 @@ Need methods to:
 - get all features for a given role
 
 - get all roles for a given feature
+
+control
+---
+AccessControlManager
+
+- The controller class for this POC
+- Delegates work to Feature and Role
+- Handles creation of new Features and Roles
+
+actors
+---
+Feature
+
+- Able to determine which Roles are authorized.
+- Able to grant authorization to a Role.
+- Knows how to lookup its data from the DB.
+
+Role
+
+- Able to determine which Features it has access to.
+- Able to add new Features to its access list.
+- Knows how to lookup its data from the DB.

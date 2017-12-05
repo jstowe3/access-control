@@ -17,6 +17,14 @@ public class Feature {
 
     public Feature(String name) {
         this.name = name;
+        this.id = getId(name);
+    }
+
+    public Feature(long id) {
+        this.id = id;
+        try (Jedis jedis = (Jedis)RedisHelper.jedis()) {
+            this.name = jedis.hget(getKey(), "name");
+        }
     }
 
     public String getName() {
@@ -27,12 +35,20 @@ public class Feature {
         return id;
     }
 
+    public long getId(String name) {
+        try (Jedis jedis = (Jedis)RedisHelper.jedis()) {
+            if(jedis.zrank(MASTER_NAME_SET, name) == null) {return 0;}
+            Double id = jedis.zscore(MASTER_NAME_SET, name);
+            return id.longValue();
+        }
+    }
+
     public boolean isNameUnique() {
         if(name == null) {
             return false;
         }
         try (Jedis jedis = (Jedis)RedisHelper.jedis()) {
-            return jedis.sismember(MASTER_NAME_SET, name);
+            return jedis.zrank(MASTER_NAME_SET, name) == null;
         }
     }
 
@@ -45,6 +61,9 @@ public class Feature {
     }
 
     public void grantAccess(Role role) {
+        if(id == 0 && getId(name) == 0) {
+            return;
+        }
         try (Jedis jedis = (Jedis)RedisHelper.jedis()) {
             jedis.sadd(getSetKey(), role.getKey());
         }
@@ -65,7 +84,7 @@ public class Feature {
             map.put("id", Long.toString(id));
             map.put("name", name);
             jedis.hmset(FEATURE_KEY_PREFIX+id, map);
-            jedis.sadd(MASTER_NAME_SET, name);
+            jedis.zadd(MASTER_NAME_SET, id, name);
         }
     }
 }
